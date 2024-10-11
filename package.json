@@ -12,7 +12,8 @@
   "dependencies": {
     "discord.js": "^14.16.3",
     "dotenv": "^16.4.5",
-    "google-spreadsheet": "^4.1.4"
+    "google-spreadsheet": "^4.1.4",
+    "googleapis": "^144.0.0"
   },
   "devDependencies": {
     "@discordjs/builders": "^1.9.0",
