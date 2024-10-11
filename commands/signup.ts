@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from '@discordjs/builders';
-import { CommandInteraction } from 'discord.js';
+import { CommandInteraction, EmbedBuilder } from 'discord.js';
 import { google } from 'googleapis';
 import credentials from '../config/credentials.json';
 
@@ -94,8 +94,8 @@ module.exports = {
   async execute(interaction: CommandInteraction) {
     await interaction.deferReply();
 
-    const userClass = interaction.options.getString('class', true);
-    const build = interaction.options.getString('build', true);
+    const userClass = interaction.options.get('class')?.value as string;
+    const build = interaction.options.get('build')?.value as string;
     const discordUsername = interaction.user.username;
 
     try {
@@ -132,7 +132,19 @@ module.exports = {
         }
       });
 
-      await interaction.editReply(`Successfully signed up ${name} (${userClass} - ${build}) for the weekly event!`);
+      // Create success embed message
+      const embed = new EmbedBuilder()
+        .setColor('#00FF00')
+        .setTitle('✅ Signup Successful!')
+        .setDescription(`You have successfully signed up for the weekly event!`)
+        .addFields(
+          { name: 'Player', value: `👤 ${name}`, inline: true },
+          { name: 'Class', value: `🛡️ ${userClass}`, inline: true },
+          { name: 'Build', value: `⚔️ ${build}`, inline: true }
+        )
+        .setFooter({ text: 'Good luck in your upcoming battles! 💪🔥' });
+
+      await interaction.editReply({ embeds: [embed] });
     } catch (error) {
       console.error('Error adding signup:', error);
       await interaction.editReply('There was an error while trying to sign you up. Please try again later or contact an admin.');
