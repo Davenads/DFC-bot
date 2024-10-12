@@ -1,7 +1,8 @@
-import { SlashCommandBuilder } from '@discordjs/builders';
-import { CommandInteraction, EmbedBuilder } from 'discord.js';
-import { google } from 'googleapis';
-import credentials from '../config/credentials.json';
+const { SlashCommandBuilder } = require('@discordjs/builders');
+const { CommandInteraction, EmbedBuilder } = require('discord.js');
+const { google } = require('googleapis');
+const fs = require('fs');
+const credentials = require('../config/credentials.json');
 
 const sheets = google.sheets('v4');
 const auth = new google.auth.GoogleAuth({
@@ -91,11 +92,14 @@ module.exports = {
           { name: 'Concentrate', value: 'Concentrate' },
         )
     ),
-  async execute(interaction: CommandInteraction) {
+  /**
+   * @param {CommandInteraction} interaction
+   */
+  async execute(interaction) {
     await interaction.deferReply();
 
-    const userClass = interaction.options.get('class')?.value as string;
-    const build = interaction.options.get('build')?.value as string;
+    const userClass = interaction.options.get('class')?.value;
+    const build = interaction.options.get('build')?.value;
     const discordUsername = interaction.user.username;
 
     try {

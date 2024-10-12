@@ -1,6 +1,6 @@
-import { SlashCommandBuilder, MessageEmbed } from 'discord.js';
-import { GoogleSpreadsheet } from 'google-spreadsheet';
-import credentials from '../config/credentials.json';
+const { SlashCommandBuilder, MessageEmbed } = require('discord.js');
+const { GoogleSpreadsheet } = require('google-spreadsheet');
+const credentials = require('../config/credentials.json');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -58,7 +58,7 @@ module.exports = {
         'Leave Status': ''
       });
 
-      // Assign '@DFC Dueler' role if the user does$1\'$2 have it
+      // Assign '@DFC Dueler' role if the user does not have it
       const role = guild.roles.cache.find(r => r.name === 'DFC Dueler');
       if (role && !member.roles.cache.has(role.id)) {
         await member.roles.add(role);
