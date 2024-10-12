@@ -28,7 +28,11 @@ export const handleCommand = async (client: Client, commandName: string, ...args
   if (!command) return;
 
   try {
-    await command.execute(...args);
+    if (Array.isArray(args)) {
+      await command.execute(client, ...args);
+    } else {
+      console.error('Arguments passed to command.execute are not an array.');
+    }
   } catch (error) {
     console.error(`Error executing command ${commandName}:`, error);
   }

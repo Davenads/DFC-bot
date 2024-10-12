@@ -1,7 +1,7 @@
 {
   "name": "dfc-bot",
   "version": "1.0.0",
-  "description": "",
+  "description": "DFC Bot is a Discord bot for managing the Diablo Fighting Championship (DFC) roster. It helps users register for events, update information, and interact with the DFC community.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
