@@ -1,157 +1,83 @@
-const { SlashCommandBuilder } = require('@discordjs/builders');
-const { CommandInteraction, EmbedBuilder } = require('discord.js');
-const { google } = require('googleapis');
-const fs = require('fs');
-const credentials = require('../config/credentials.json');
+// index.ts for DFC-bot
+const { Client, GatewayIntentBits, Interaction, Role } = require('discord.js');
+const { GoogleSpreadsheet } = require('google-spreadsheet');
+require('dotenv').config();
 
-const sheets = google.sheets('v4');
-const auth = new google.auth.GoogleAuth({
-  credentials,
-  scopes: ['https://www.googleapis.com/auth/spreadsheets']
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildMessageReactions,
+  ],
 });
 
-const SPREADSHEET_ID = 'your_spreadsheet_id';
-const ROSTER_TAB = 'Roster';
-const SIGNUPS_TAB = 'Weekly Signups';
+const doc = new GoogleSpreadsheet(process.env.SPREADSHEET_ID);
 
-module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('signup')
-    .setDescription('Sign up for the weekly event')
-    .addStringOption(option =>
-      option.setName('class')
-        .setDescription('Character class')
-        .setRequired(true)
-        .addChoices(
-          { name: 'Amazon', value: 'Amazon' },
-          { name: 'Assassin', value: 'Assassin' },
-          { name: 'Barbarian', value: 'Barbarian' },
-          { name: 'Druid', value: 'Druid' },
-          { name: 'Necromancer', value: 'Necromancer' },
-          { name: 'Paladin', value: 'Paladin' },
-          { name: 'Sorceress', value: 'Sorceress' },
-        )
-    )
-    .addStringOption(option =>
-      option.setName('build')
-        .setDescription('Character build')
-        .setRequired(true)
-        .addChoices(
-          { name: 'Wind', value: 'Wind' },
-          { name: 'Shaman', value: 'Shaman' },
-          { name: 'Fire Druid', value: 'Fire Druid' },
-          { name: 'Summon', value: 'Summon' },
-          { name: 'Fury', value: 'Fury' },
-          { name: 'Ghost', value: 'Ghost' },
-          { name: 'Trapper', value: 'Trapper' },
-          { name: 'Spider', value: 'Spider' },
-          { name: 'Blade', value: 'Blade' },
-          { name: 'Kicker', value: 'Kicker' },
-          { name: 'Hybrid WOF', value: 'Hybrid WOF' },
-          { name: 'Hybrid LS', value: 'Hybrid LS' },
-          { name: 'Hybrid WW', value: 'Hybrid WW' },
-          { name: 'Other', value: 'Other' },
-          { name: 'Tribird', value: 'Tribird' },
-          { name: 'Telebow', value: 'Telebow' },
-          { name: 'Fort Tele Zon', value: 'Fort Tele Zon' },
-          { name: 'CS Hybrid Bowa', value: 'CS Hybrid Bowa' },
-          { name: 'CS Zon', value: 'CS Zon' },
-          { name: 'Hybrid', value: 'Hybrid' },
-          { name: 'Walkbow', value: 'Walkbow' },
-          { name: 'Jab', value: 'Jab' },
-          { name: 'Javazon', value: 'Javazon' },
-          { name: 'Bow Sorc', value: 'Bow Sorc' },
-          { name: 'Cold ES', value: 'Cold ES' },
-          { name: 'Cold Vita', value: 'Cold Vita' },
-          { name: 'Lite ES', value: 'Lite ES' },
-          { name: 'Lite Vita', value: 'Lite Vita' },
-          { name: 'Fire Vita', value: 'Fire Vita' },
-          { name: 'T/V', value: 'T/V' },
-          { name: 'Murderin', value: 'Murderin' },
-          { name: 'Mage', value: 'Mage' },
-          { name: 'Auradin', value: 'Auradin' },
-          { name: 'V/T', value: 'V/T' },
-          { name: 'Hammerdin', value: 'Hammerdin' },
-          { name: 'Vanquisher', value: 'Vanquisher' },
-          { name: 'V/C', value: 'V/C' },
-          { name: 'Zealot', value: 'Zealot' },
-          { name: 'Ranger', value: 'Ranger' },
-          { name: 'Poondin', value: 'Poondin' },
-          { name: 'Liberator', value: 'Liberator' },
-          { name: 'Zeal/FoH', value: 'Zeal/FoH' },
-          { name: 'Charger', value: 'Charger' },
-          { name: 'Poison', value: 'Poison' },
-          { name: 'Bone', value: 'Bone' },
-          { name: 'Bone/Psn Hybrid', value: 'Bone/Psn Hybrid' },
-          { name: 'Psn Dagger', value: 'Psn Dagger' },
-          { name: 'Throw/WW Hybrid', value: 'Throw/WW Hybrid' },
-          { name: 'BvC', value: 'BvC' },
-          { name: 'BvB', value: 'BvB' },
-          { name: 'BvA', value: 'BvA' },
-          { name: 'Singer', value: 'Singer' },
-          { name: 'Concentrate', value: 'Concentrate' },
-        )
-    ),
-  /**
-   * @param {CommandInteraction} interaction
-   */
-  async execute(interaction) {
-    await interaction.deferReply();
-
-    const userClass = interaction.options.get('class')?.value;
-    const build = interaction.options.get('build')?.value;
-    const discordUsername = interaction.user.username;
-
-    try {
-      const authClient = await auth.getClient();
-
-      // Get roster data to crosscheck Discord username
-      const rosterRes = await sheets.spreadsheets.values.get({
-        auth: authClient,
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${ROSTER_TAB}!A:Z`
-      });
-
-      const rosterValues = rosterRes.data.values;
-      if (!rosterValues) {
-        throw new Error('No roster data found');
-      }
-
-      // Find user's name from roster
-      const userRow = rosterValues.find(row => row[1] === discordUsername);
-      if (!userRow) {
-        throw new Error('Your Discord username was not found in the roster. Please contact an admin.');
-      }
-
-      const name = userRow[0];
-
-      // Add signup entry to Weekly Signups tab
-      await sheets.spreadsheets.values.append({
-        auth: authClient,
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${SIGNUPS_TAB}!A:D`,
-        valueInputOption: 'USER_ENTERED',
-        requestBody: {
-          values: [[name, userClass, build, 'HLD']] // Default match type to 'HLD'
-        }
-      });
-
-      // Create success embed message
-      const embed = new EmbedBuilder()
-        .setColor('#00FF00')
-        .setTitle('✅ Signup Successful!')
-        .setDescription(`You have successfully signed up for the weekly event!`)
-        .addFields(
-          { name: 'Player', value: `👤 ${name}`, inline: true },
-          { name: 'Class', value: `🛡️ ${userClass}`, inline: true },
-          { name: 'Build', value: `⚔️ ${build}`, inline: true }
-        )
-        .setFooter({ text: 'Good luck in your upcoming battles! 💪🔥' });
-
-      await interaction.editReply({ embeds: [embed] });
-    } catch (error) {
-      console.error('Error adding signup:', error);
-      await interaction.editReply('There was an error while trying to sign you up. Please try again later or contact an admin.');
-    }
+async function accessSpreadsheet() {
+  if (!process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
+    throw new Error('Missing Google Sheets credentials in environment variables.');
   }
-};
+
+  await doc.useServiceAccountAuth({
+    client_email: process.env.GOOGLE_CLIENT_EMAIL,
+    private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\n/g, '
+'),
+  });
+  await doc.loadInfo();
+}
+
+client.once('ready', () => {
+  console.log('DFC-bot is online!');
+  accessSpreadsheet().catch((err) => console.error('Error accessing spreadsheet:', err));
+});
+
+client.on('interactionCreate', async (interaction) => {
+  if (!interaction.isCommand()) return;
+
+  const { commandName, member } = interaction;
+  if (!member || !('roles' in member)) {
+    await interaction.reply({ content: 'Unable to retrieve member roles.', ephemeral: true });
+    return;
+  }
+
+  const userRoles = member.roles.cache;
+  const hasDuelerRole = userRoles.some((role) => role.name === 'DFC Dueler');
+  const isModerator = userRoles.some((role) => role.name === 'Moderator');
+
+  if (!hasDuelerRole) {
+    await interaction.reply({ content: 'You need the @DFC Dueler role to use this command.', ephemeral: true });
+    return;
+  }
+
+  try {
+    switch (commandName) {
+      case 'register':
+        // Logic to register a player for the weekly event
+        await interaction.reply('You have been registered for this week\'s event!');
+        break;
+      case 'reportwin':
+        // Logic for reporting wins
+        await interaction.reply('Win has been reported successfully!');
+        break;
+      case 'creatematchup':
+        if (!isModerator) {
+          await interaction.reply({ content: 'Only moderators can create matchups.', ephemeral: true });
+          return;
+        }
+        // Logic for creating matchups in the fight card tab
+        await interaction.reply('Matchup has been created successfully!');
+        break;
+      default:
+        await interaction.reply({ content: 'Unknown command!', ephemeral: true });
+    }
+  } catch (error) {
+    console.error('Error handling interaction:', error);
+    await interaction.reply({ content: 'There was an error while processing your request.', ephemeral: true });
+  }
+});
+
+client.login(process.env.DISCORD_TOKEN).catch((err) => {
+  console.error('Error logging in:', err);
+});

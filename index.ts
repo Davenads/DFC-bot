@@ -1,9 +1,7 @@
 // index.ts for DFC-bot
-import { Client, GatewayIntentBits } from 'discord.js';
-import { GoogleSpreadsheet } from 'google-spreadsheet';
-import dotenv from 'dotenv';
-
-dotenv.config();
+const { Client, GatewayIntentBits, Interaction, Role } = require('discord.js');
+const { GoogleSpreadsheet } = require('google-spreadsheet');
+require('dotenv').config();
 
 const client = new Client({
   intents: [
@@ -13,12 +11,16 @@ const client = new Client({
   ],
 });
 
-const doc = new GoogleSpreadsheet(process.env.GOOGLE_SPREADSHEET_ID);
+const doc = new GoogleSpreadsheet(process.env.SPREADSHEET_ID);
 
 async function accessSpreadsheet() {
+  if (!process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
+    throw new Error('Missing Google Sheets credentials in environment variables.');
+  }
+
   await doc.useServiceAccountAuth({
     client_email: process.env.GOOGLE_CLIENT_EMAIL,
-    private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\n/g, '\n'),
   });
   await doc.loadInfo();
 }
@@ -32,9 +34,14 @@ client.on('interactionCreate', async (interaction) => {
   if (!interaction.isCommand()) return;
 
   const { commandName, member } = interaction;
-  const userRoles = member?.roles.cache;
-  const hasDuelerRole = userRoles?.some((role) => role.name === 'DFC Dueler');
-  const isModerator = userRoles?.some((role) => role.name === 'Moderator');
+  if (!member || !('roles' in member)) {
+    await interaction.reply({ content: 'Unable to retrieve member roles.', ephemeral: true });
+    return;
+  }
+
+  const userRoles = member.roles.cache;
+  const hasDuelerRole = userRoles.some((role) => role.name === 'DFC Dueler');
+  const isModerator = userRoles.some((role) => role.name === 'Moderator');
 
   if (!hasDuelerRole) {
     await interaction.reply({ content: 'You need the @DFC Dueler role to use this command.', ephemeral: true });
@@ -45,7 +52,7 @@ client.on('interactionCreate', async (interaction) => {
     switch (commandName) {
       case 'register':
         // Logic to register a player for the weekly event
-        await interaction.reply('You have been registered for this week's event!');
+        await interaction.reply('You have been registered for this week\'s event!');
         break;
       case 'reportwin':
         // Logic for reporting wins
@@ -68,4 +75,6 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
-client.login(process.env.DISCORD_TOKEN);
+client.login(process.env.DISCORD_TOKEN).catch((err) => {
+  console.error('Error logging in:', err);
+});
